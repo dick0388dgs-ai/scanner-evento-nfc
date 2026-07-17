@@ -44,11 +44,37 @@
     }
 
     #reader {
-      width: 100%;
-      max-width: 230px;
+      width: 96%;
+      max-width: 600px;
       margin: 8px auto;
     }
-
+    
+    /* Agranda el video de la cámara */
+    #reader video {
+      width: 100% !important;
+      min-height: 380px;
+      object-fit: cover;
+      border-radius: 12px;
+    }
+    
+    /* Evita que los elementos internos se salgan */
+    #reader > div {
+      width: 100% !important;
+      box-sizing: border-box;
+    }
+    
+    @media (max-width: 600px) {
+      #reader {
+        width: 98%;
+        max-width: none;
+      }
+    
+      #reader video {
+        min-height: 400px;
+        max-height: 55vh;
+      }
+    }
+    
     .fila {
       display: flex;
       gap: 8px;
