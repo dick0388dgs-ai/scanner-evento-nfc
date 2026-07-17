@@ -321,8 +321,20 @@
     new Html5QrcodeScanner(
       "reader",
       {
-        fps: 7,
-        qrbox: 160,
+        fps: 10,
+    
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+          const lado = Math.floor(
+            Math.min(viewfinderWidth, viewfinderHeight) * 0.82
+          );
+    
+          return {
+            width: lado,
+            height: lado
+          };
+        },
+    
+        aspectRatio: 1.333334,
         rememberLastUsedCamera: true
       },
       false
