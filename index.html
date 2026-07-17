@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Escáner</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+      background: #f5f5f5;
+    }
+
+    #res {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      margin: 0 auto 10px;
+      padding: 14px;
+      color: white;
+      font-size: 26px;
+      font-weight: bold;
+      display: none;
+      width: 95%;
+      max-width: 420px;
+      border-radius: 12px;
+      box-sizing: border-box;
+      min-height: 92px;
+    }
+
+    .ok { background: #188038; }
+    .repetido { background: #d93025; }
+    .no { background: #f29900; }
+    .error { background: #666; }
+
+    .detalle {
+      font-size: 18px;
+      margin-top: 6px;
+      font-weight: normal;
+      line-height: 1.2;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 230px;
+      margin: 8px auto;
+    }
+
+    .fila {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    input {
+      width: 65%;
+      max-width: 220px;
+      font-size: 20px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    button {
+      font-size: 18px;
+      padding: 10px 14px;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      background: #222;
+      color: white;
+    }
+
+    #debug {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    #estadoAudio {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #444;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="res"></div>
+
+  <div id="reader"></div>
+
+  <div id="debug">Esperando QR...</div>
+  <div id="estadoAudio">Toca una vez la pantalla para activar sonido.</div>
+
+  <div class="fila">
+    <input id="dni" placeholder="DNI">
+    <button onclick="manual()">OK</button>
+  </div>
+
+  <script>
+    const API = "https://script.google.com/macros/s/AKfycby4Cqm2beoseskyYse9qWd2mRRCe0RfjvpnSlpXiksqqmqZfBAXS76k_Y9orI6eCrCsbA/exec?formato=json";
+
+    let bloqueado = false;
+    let ultimoCodigo = "";
+    let ultimoTiempo = 0;
+
+    const TIEMPO_BLOQUEO = 2200;     // rápido
+    const TIEMPO_MISMO_QR = 3000;    // evita repeticiones del mismo
+    let audioCtx = null;
+    let audioActivo = false;
+
+    function debug(txt) {
+      document.getElementById("debug").textContent = txt;
+    }
+
+    function estadoAudio(txt) {
+      document.getElementById("estadoAudio").textContent = txt;
+    }
+
+    function mostrar(data, clase) {
+      let box = document.getElementById("res");
+      box.style.display = "block";
+      box.className = clase;
+
+      box.innerHTML = `
+        <div>${data.titulo || "SIN RESPUESTA"}</div>
+        <div class="detalle">${data.nombre || ""}</div>
+        <div class="detalle">DNI: ${data.dni || ""}</div>
+      `;
+    }
+
+    function limpiarResultado() {
+      const box = document.getElementById("res");
+      box.style.display = "none";
+      box.innerHTML = "";
+    }
+
+    function activarAudio() {
+      if (audioActivo) return;
+
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+          estadoAudio("Este navegador no soporta audio web.");
+          return;
+        }
+
+        audioCtx = new AudioContextClass();
+
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+
+        audioActivo = true;
+        estadoAudio("Sonido activado.");
+      } catch (e) {
+        estadoAudio("No se pudo activar sonido.");
+      }
+    }
+
+    function beep(freq, duration, volume, type, delayMs) {
+      if (!audioActivo || !audioCtx) return;
+
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = type || "sine";
+        osc.frequency.value = freq;
+        gain.gain.value = volume || 0.15;
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const startAt = audioCtx.currentTime + ((delayMs || 0) / 1000);
+        const endAt = startAt + (duration / 1000);
+
+        osc.start(startAt);
+        osc.stop(endAt);
+      } catch (e) {}
+    }
+
+    function sonidoOk() {
+      beep(980, 70, 0.18, "square", 0);
+      beep(1280, 90, 0.18, "square", 90);
+    }
+
+    function sonidoRepetido() {
+      beep(280, 120, 0.22, "sawtooth", 0);
+      beep(220, 180, 0.22, "sawtooth", 130);
+    }
+
+    function sonidoNoEncontrado() {
+      beep(520, 100, 0.18, "triangle", 0);
+      beep(520, 100, 0.18, "triangle", 140);
+    }
+
+    function vibrarOk() {
+      if (navigator.vibrate) navigator.vibrate([60, 30, 80]);
+    }
+
+    function vibrarRepetido() {
+      if (navigator.vibrate) navigator.vibrate([180, 70, 180]);
+    }
+
+    function vibrarNoEncontrado() {
+      if (navigator.vibrate) navigator.vibrate([100, 40, 100]);
+    }
+
+    async function validar(dni) {
+      if (!dni) return;
+
+      dni = dni.trim();
+      const ahora = Date.now();
+
+      if (bloqueado) return;
+
+      if (dni === ultimoCodigo && (ahora - ultimoTiempo) < TIEMPO_MISMO_QR) {
+        debug("Mismo QR ignorado");
+        return;
+      }
+
+      bloqueado = true;
+      ultimoCodigo = dni;
+      ultimoTiempo = ahora;
+
+      debug("Validando: " + dni);
+
+      try {
+        const r = await fetch(API + "&dni=" + encodeURIComponent(dni), {
+          method: "GET",
+          cache: "no-store"
+        });
+
+        const d = await r.json();
+
+        if (d.estado === "ok") {
+          mostrar(d, "ok");
+          sonidoOk();
+          vibrarOk();
+        } else if (d.estado === "repetido") {
+          mostrar(d, "repetido");
+          sonidoRepetido();
+          vibrarRepetido();
+        } else if (d.estado === "no_encontrado") {
+          mostrar(d, "no");
+          sonidoNoEncontrado();
+          vibrarNoEncontrado();
+        } else {
+          mostrar({ titulo: "ERROR", nombre: "", dni: dni }, "error");
+        }
+
+        debug("Listo");
+
+      } catch (e) {
+        mostrar({
+          titulo: "ERROR DE CONEXIÓN",
+          nombre: "",
+          dni: dni
+        }, "error");
+
+        sonidoRepetido();
+        vibrarRepetido();
+        debug("Error conexión");
+      }
+
+      setTimeout(() => {
+        bloqueado = false;
+        limpiarResultado();
+        debug("Esperando QR...");
+      }, TIEMPO_BLOQUEO);
+    }
+
+    function manual() {
+      let dni = document.getElementById("dni").value.trim();
+      if (!dni) return;
+      activarAudio();
+      validar(dni);
+      document.getElementById("dni").value = "";
+    }
+
+    function scanSuccess(text) {
+      validar(text.trim());
+    }
+
+    document.body.addEventListener("click", activarAudio, { once: true });
+    document.body.addEventListener("touchstart", activarAudio, { once: true });
+
+    new Html5QrcodeScanner(
+      "reader",
+      {
+        fps: 7,
+        qrbox: 160,
+        rememberLastUsedCamera: true
+      },
+      false
+    ).render(scanSuccess);
+  </script>
+<div style="
+  position: fixed;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.6;
+  pointer-events: none;
+">
+  <img src="https://raw.githubusercontent.com/dick0388dgs-ai/scanner-evento/refs/heads/main/ChatGPT%20Image%2026%20abr%202026%2C%2011_41_43%20p.m..png" style="width:100px;">
+</div>
+</body>
+</html>
