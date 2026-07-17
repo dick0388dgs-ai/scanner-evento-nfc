@@ -1,11 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
   <title>Escáner</title>
+
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: Arial, sans-serif;
       text-align: center;
@@ -13,6 +24,78 @@
       padding: 10px;
       background: #f5f5f5;
     }
+
+    /* PANTALLA DE CONTRASEÑA */
+
+    #pantallaAcceso {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .cajaAcceso {
+      width: 100%;
+      max-width: 380px;
+      background: white;
+      padding: 28px 22px;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .logoAcceso {
+      width: 110px;
+      max-width: 60%;
+      margin-bottom: 8px;
+    }
+
+    .cajaAcceso h1 {
+      margin: 5px 0 10px;
+      font-size: 27px;
+    }
+
+    .cajaAcceso p {
+      margin: 0 0 18px;
+      color: #555;
+      font-size: 16px;
+    }
+
+    #clave {
+      width: 100%;
+      max-width: none;
+      font-size: 21px;
+      padding: 13px;
+      text-align: center;
+      border: 1px solid #aaa;
+      border-radius: 10px;
+    }
+
+    #btnIngresar {
+      width: 100%;
+      margin-top: 12px;
+      padding: 14px;
+      font-weight: bold;
+    }
+
+    #mensajeAcceso {
+      min-height: 24px;
+      margin-top: 12px;
+      color: #d93025;
+      font-weight: bold;
+    }
+
+    /* El escáner permanece oculto hasta ingresar */
+
+    #contenidoScanner {
+      display: none;
+      padding-bottom: 100px;
+    }
+
+    /* RESULTADO DEL ESCANEO */
 
     #res {
       position: sticky;
@@ -27,14 +110,24 @@
       width: 95%;
       max-width: 420px;
       border-radius: 12px;
-      box-sizing: border-box;
       min-height: 92px;
     }
 
-    .ok { background: #188038; }
-    .repetido { background: #d93025; }
-    .no { background: #f29900; }
-    .error { background: #666; }
+    .ok {
+      background: #188038;
+    }
+
+    .repetido {
+      background: #d93025;
+    }
+
+    .no {
+      background: #f29900;
+    }
+
+    .error {
+      background: #666;
+    }
 
     .detalle {
       font-size: 18px;
@@ -43,38 +136,38 @@
       line-height: 1.2;
     }
 
+    /* CÁMARA */
+
     #reader {
       width: 92%;
       max-width: 420px;
       margin: 10px auto;
     }
-    
-    /* Agranda el video de la cámara */
+
     #reader video {
       width: 100% !important;
       min-height: 380px;
       object-fit: cover;
       border-radius: 12px;
     }
-    
-    /* Evita que los elementos internos se salgan */
+
     #reader > div {
       width: 100% !important;
       box-sizing: border-box;
     }
-    
+
     @media (max-width: 600px) {
       #reader {
         width: 98%;
         max-width: none;
       }
-    
+
       #reader video {
         min-height: 400px;
         max-height: 55vh;
       }
     }
-    
+
     .fila {
       display: flex;
       gap: 8px;
@@ -83,12 +176,11 @@
       flex-wrap: wrap;
     }
 
-    input {
+    #dni {
       width: 65%;
       max-width: 220px;
       font-size: 20px;
       padding: 10px;
-      box-sizing: border-box;
     }
 
     button {
@@ -112,45 +204,259 @@
       font-size: 12px;
       color: #444;
     }
+
+    #btnCerrar {
+      margin-top: 18px;
+      background: #666;
+      font-size: 14px;
+      padding: 9px 13px;
+    }
+
+    .logoInferior {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .logoInferior img {
+      width: 100px;
+    }
   </style>
 </head>
 
 <body>
 
-  <div id="res"></div>
+  <!-- PANTALLA DE ACCESO -->
 
-  <div id="reader"></div>
+  <div id="pantallaAcceso">
 
-  <div id="debug">Esperando QR...</div>
-  <div id="estadoAudio">Toca una vez la pantalla para activar sonido.</div>
+    <div class="cajaAcceso">
 
-  <div class="fila">
-    <input id="dni" placeholder="DNI">
-    <button onclick="manual()">OK</button>
+      <img
+        class="logoAcceso"
+        src="https://raw.githubusercontent.com/dick0388dgs-ai/scanner-evento/refs/heads/main/ChatGPT%20Image%2026%20abr%202026%2C%2011_41_43%20p.m..png"
+        alt="Digital Reality"
+      >
+
+      <h1>Acceso al escáner</h1>
+
+      <p>Ingresa la contraseña para continuar.</p>
+
+      <input
+        id="clave"
+        type="password"
+        placeholder="Contraseña"
+        autocomplete="off"
+      >
+
+      <button id="btnIngresar" onclick="ingresar()">
+        INGRESAR
+      </button>
+
+      <div id="mensajeAcceso"></div>
+
+    </div>
+
+  </div>
+
+  <!-- CONTENIDO DEL ESCÁNER -->
+
+  <div id="contenidoScanner">
+
+    <div id="res"></div>
+
+    <div id="reader"></div>
+
+    <div id="debug">
+      Esperando QR...
+    </div>
+
+    <div id="estadoAudio">
+      Toca una vez la pantalla para activar sonido.
+    </div>
+
+    <div class="fila">
+      <input
+        id="dni"
+        placeholder="DNI"
+        inputmode="numeric"
+      >
+
+      <button onclick="manual()">
+        OK
+      </button>
+    </div>
+
+    <button id="btnCerrar" onclick="cerrarAcceso()">
+      Cerrar acceso
+    </button>
+
+    <div class="logoInferior">
+      <img
+        src="https://raw.githubusercontent.com/dick0388dgs-ai/scanner-evento/refs/heads/main/ChatGPT%20Image%2026%20abr%202026%2C%2011_41_43%20p.m..png"
+        alt="Digital Reality"
+      >
+    </div>
+
   </div>
 
   <script>
-    const API = "https://script.google.com/macros/s/AKfycby4Cqm2beoseskyYse9qWd2mRRCe0RfjvpnSlpXiksqqmqZfBAXS76k_Y9orI6eCrCsbA/exec?formato=json";
+    const API =
+      "https://script.google.com/macros/s/AKfycby4Cqm2beoseskyYse9qWd2mRRCe0RfjvpnSlpXiksqqmqZfBAXS76k_Y9orI6eCrCsbA/exec?formato=json";
 
+    /* CONFIGURACIÓN DE CONTRASEÑA */
+
+    const CONTRASENA = "DR2026";
+
+    // Tiempo de acceso: 8 horas
+    const DURACION_ACCESO = 8 * 60 * 60 * 1000;
+
+    let scannerIniciado = false;
     let bloqueado = false;
     let ultimoCodigo = "";
     let ultimoTiempo = 0;
 
-    const TIEMPO_BLOQUEO = 2200;     // rápido
-    const TIEMPO_MISMO_QR = 3000;    // evita repeticiones del mismo
+    const TIEMPO_BLOQUEO = 2200;
+    const TIEMPO_MISMO_QR = 3000;
+
     let audioCtx = null;
     let audioActivo = false;
 
+    function ingresar() {
+      const clave =
+        document.getElementById("clave").value.trim();
+
+      const mensaje =
+        document.getElementById("mensajeAcceso");
+
+      if (clave === CONTRASENA) {
+        sessionStorage.setItem(
+          "accesoScanner",
+          "autorizado"
+        );
+
+        sessionStorage.setItem(
+          "horaAccesoScanner",
+          Date.now().toString()
+        );
+
+        mensaje.textContent = "";
+
+        mostrarScanner();
+
+      } else {
+        mensaje.textContent = "Contraseña incorrecta";
+
+        document.getElementById("clave").value = "";
+        document.getElementById("clave").focus();
+      }
+    }
+
+    function revisarAcceso() {
+      const autorizado =
+        sessionStorage.getItem("accesoScanner") ===
+        "autorizado";
+
+      const horaAcceso = Number(
+        sessionStorage.getItem("horaAccesoScanner")
+      );
+
+      const accesoVigente =
+        horaAcceso &&
+        Date.now() - horaAcceso < DURACION_ACCESO;
+
+      if (autorizado && accesoVigente) {
+        mostrarScanner();
+      } else {
+        cerrarSesionSinRedirigir();
+      }
+    }
+
+    function mostrarScanner() {
+      document.getElementById(
+        "pantallaAcceso"
+      ).style.display = "none";
+
+      document.getElementById(
+        "contenidoScanner"
+      ).style.display = "block";
+
+      iniciarScanner();
+    }
+
+    function cerrarSesionSinRedirigir() {
+      sessionStorage.removeItem("accesoScanner");
+      sessionStorage.removeItem("horaAccesoScanner");
+
+      document.getElementById(
+        "pantallaAcceso"
+      ).style.display = "flex";
+
+      document.getElementById(
+        "contenidoScanner"
+      ).style.display = "none";
+    }
+
+    function cerrarAcceso() {
+      sessionStorage.removeItem("accesoScanner");
+      sessionStorage.removeItem("horaAccesoScanner");
+
+      location.reload();
+    }
+
+    function iniciarScanner() {
+      if (scannerIniciado) return;
+
+      scannerIniciado = true;
+
+      new Html5QrcodeScanner(
+        "reader",
+        {
+          fps: 10,
+
+          qrbox: function(
+            viewfinderWidth,
+            viewfinderHeight
+          ) {
+            const lado = Math.floor(
+              Math.min(
+                viewfinderWidth,
+                viewfinderHeight
+              ) * 0.70
+            );
+
+            return {
+              width: lado,
+              height: lado
+            };
+          },
+
+          aspectRatio: 1.33334,
+          rememberLastUsedCamera: true
+        },
+        false
+      ).render(scanSuccess);
+    }
+
     function debug(txt) {
-      document.getElementById("debug").textContent = txt;
+      document.getElementById(
+        "debug"
+      ).textContent = txt;
     }
 
     function estadoAudio(txt) {
-      document.getElementById("estadoAudio").textContent = txt;
+      document.getElementById(
+        "estadoAudio"
+      ).textContent = txt;
     }
 
     function mostrar(data, clase) {
-      let box = document.getElementById("res");
+      const box = document.getElementById("res");
+
       box.style.display = "block";
       box.className = clase;
 
@@ -163,6 +469,7 @@
 
     function limpiarResultado() {
       const box = document.getElementById("res");
+
       box.style.display = "none";
       box.innerHTML = "";
     }
@@ -171,9 +478,15 @@
       if (audioActivo) return;
 
       try {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        const AudioContextClass =
+          window.AudioContext ||
+          window.webkitAudioContext;
+
         if (!AudioContextClass) {
-          estadoAudio("Este navegador no soporta audio web.");
+          estadoAudio(
+            "Este navegador no soporta audio web."
+          );
+
           return;
         }
 
@@ -185,12 +498,19 @@
 
         audioActivo = true;
         estadoAudio("Sonido activado.");
+
       } catch (e) {
         estadoAudio("No se pudo activar sonido.");
       }
     }
 
-    function beep(freq, duration, volume, type, delayMs) {
+    function beep(
+      freq,
+      duration,
+      volume,
+      type,
+      delayMs
+    ) {
       if (!audioActivo || !audioCtx) return;
 
       try {
@@ -204,11 +524,16 @@
         osc.connect(gain);
         gain.connect(audioCtx.destination);
 
-        const startAt = audioCtx.currentTime + ((delayMs || 0) / 1000);
-        const endAt = startAt + (duration / 1000);
+        const startAt =
+          audioCtx.currentTime +
+          ((delayMs || 0) / 1000);
+
+        const endAt =
+          startAt + (duration / 1000);
 
         osc.start(startAt);
         osc.stop(endAt);
+
       } catch (e) {}
     }
 
@@ -228,26 +553,36 @@
     }
 
     function vibrarOk() {
-      if (navigator.vibrate) navigator.vibrate([60, 30, 80]);
+      if (navigator.vibrate) {
+        navigator.vibrate([60, 30, 80]);
+      }
     }
 
     function vibrarRepetido() {
-      if (navigator.vibrate) navigator.vibrate([180, 70, 180]);
+      if (navigator.vibrate) {
+        navigator.vibrate([180, 70, 180]);
+      }
     }
 
     function vibrarNoEncontrado() {
-      if (navigator.vibrate) navigator.vibrate([100, 40, 100]);
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 40, 100]);
+      }
     }
 
     async function validar(dni) {
       if (!dni) return;
 
       dni = dni.trim();
+
       const ahora = Date.now();
 
       if (bloqueado) return;
 
-      if (dni === ultimoCodigo && (ahora - ultimoTiempo) < TIEMPO_MISMO_QR) {
+      if (
+        dni === ultimoCodigo &&
+        ahora - ultimoTiempo < TIEMPO_MISMO_QR
+      ) {
         debug("Mismo QR ignorado");
         return;
       }
@@ -259,10 +594,13 @@
       debug("Validando: " + dni);
 
       try {
-        const r = await fetch(API + "&dni=" + encodeURIComponent(dni), {
-          method: "GET",
-          cache: "no-store"
-        });
+        const r = await fetch(
+          API + "&dni=" + encodeURIComponent(dni),
+          {
+            method: "GET",
+            cache: "no-store"
+          }
+        );
 
         const d = await r.json();
 
@@ -270,26 +608,39 @@
           mostrar(d, "ok");
           sonidoOk();
           vibrarOk();
+
         } else if (d.estado === "repetido") {
           mostrar(d, "repetido");
           sonidoRepetido();
           vibrarRepetido();
+
         } else if (d.estado === "no_encontrado") {
           mostrar(d, "no");
           sonidoNoEncontrado();
           vibrarNoEncontrado();
+
         } else {
-          mostrar({ titulo: "ERROR", nombre: "", dni: dni }, "error");
+          mostrar(
+            {
+              titulo: "ERROR",
+              nombre: "",
+              dni: dni
+            },
+            "error"
+          );
         }
 
         debug("Listo");
 
       } catch (e) {
-        mostrar({
-          titulo: "ERROR DE CONEXIÓN",
-          nombre: "",
-          dni: dni
-        }, "error");
+        mostrar(
+          {
+            titulo: "ERROR DE CONEXIÓN",
+            nombre: "",
+            dni: dni
+          },
+          "error"
+        );
 
         sonidoRepetido();
         vibrarRepetido();
@@ -304,51 +655,48 @@
     }
 
     function manual() {
-      let dni = document.getElementById("dni").value.trim();
+      const campoDni =
+        document.getElementById("dni");
+
+      const dni = campoDni.value.trim();
+
       if (!dni) return;
+
       activarAudio();
       validar(dni);
-      document.getElementById("dni").value = "";
+
+      campoDni.value = "";
     }
 
     function scanSuccess(text) {
       validar(text.trim());
     }
 
-    document.body.addEventListener("click", activarAudio, { once: true });
-    document.body.addEventListener("touchstart", activarAudio, { once: true });
+    document.body.addEventListener(
+      "click",
+      activarAudio,
+      { once: true }
+    );
 
-    new Html5QrcodeScanner(
-      "reader",
-      {
-        fps: 10,
-    
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-          const lado = Math.floor(
-            Math.min(viewfinderWidth, viewfinderHeight) * 0.70
-          );
-    
-          return {
-            width: lado,
-            height: lado
-          };
-        },
-    
-        aspectRatio: 1.33334,
-        rememberLastUsedCamera: true
-      },
-      false
-    ).render(scanSuccess);
+    document.body.addEventListener(
+      "touchstart",
+      activarAudio,
+      { once: true }
+    );
+
+    document
+      .getElementById("clave")
+      .addEventListener(
+        "keydown",
+        function(event) {
+          if (event.key === "Enter") {
+            ingresar();
+          }
+        }
+      );
+
+    revisarAcceso();
   </script>
-<div style="
-  position: fixed;
-  bottom: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0.6;
-  pointer-events: none;
-">
-  <img src="https://raw.githubusercontent.com/dick0388dgs-ai/scanner-evento/refs/heads/main/ChatGPT%20Image%2026%20abr%202026%2C%2011_41_43%20p.m..png" style="width:100px;">
-</div>
+
 </body>
 </html>
